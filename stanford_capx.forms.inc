@@ -329,7 +329,7 @@ function stanford_capx_mapper_form_get_field_mapping_form($form, &$form_state, $
   $field_collections = array();
   global $CAP_RESTRICTED_FIELD_PROPERTIES;
 
-  // Add some styles and javascript
+  // Add some styles and javascript.
   $form["#attached"]["css"][] = drupal_get_path("module", "stanford_capx") . "/css/stanford_capx.mapper.form.css";
   $form["#attached"]["js"][] = drupal_get_path("module", "stanford_capx") . "/js/stanford_capx.mapper.form.js";
 
@@ -520,15 +520,15 @@ function stanford_capx_mapper_form_get_field_mapping_form($form, &$form_state, $
 
   // FIELD COLLECTIONS
   // ----------------------------------------------------------------------
-
   foreach ($field_collections as $entity_machine_name => $bundles) {
     foreach ($bundles as $bundle_machine_name => $fields) {
       foreach ($fields as $field_machine_name => $field_info) {
 
         $instances = field_info_instances('field_collection_item', $field_machine_name);
         $collection_container = $entity_machine_name . "-" . $bundle_machine_name . "-collections";
+        uasort($instances, "uasort_by_widget_weight");
 
-        // Fieldset for all fields on this entity -> bundle -> collection field
+        // Fieldset for all fields on this entity -> bundle -> collection field.
         $form['field-mapping'][$collection_container][$field_machine_name] = array(
           '#type' => 'fieldset',
           '#title' => t('@name Field Collection', array("@name" => $field_machine_name)),
@@ -553,7 +553,15 @@ function stanford_capx_mapper_form_get_field_mapping_form($form, &$form_state, $
             '#description' => t("@var", array("@var" => $instance_info['description'])),
             '#field_info' => $fc_field_info,
             '#field_instance_info' => $instance_info,
-            '#theme_wrappers' => array('stanford_capx_columns_to_the_right'),
+            '#theme_wrappers' => array('stanford_capx_columns_to_the_right_field_collection'),
+          );
+
+          // Mulitple cardinality checkbox.
+          $form['field-mapping'][$collection_container][$field_machine_name][$fc_field_name]['multiple_card'] = array(
+            '#type' => "checkbox",
+            '#title' => t("Multiple cardinality field?"),
+            // '#description' => t("Check to map multiple values in to this field."),
+            '#default_value' => @$mapper->collections[$field_machine_name][$fc_field_name]['multiple_card'],
           );
 
           // Do not give all options for the file field. File field processor
@@ -565,6 +573,16 @@ function stanford_capx_mapper_form_get_field_mapping_form($form, &$form_state, $
               '#description' => t('In your JSON Path selector please pass in the whole array of image information. eg: $.profilePhotos.bigger'),
               '#default_value' => @$mapper->collections[$field_machine_name][$fc_field_name][0],
             );
+
+            // Target option.
+            $form['field-mapping'][$collection_container][$field_machine_name][$fc_field_name]['file_target'] = array(
+              '#type' => "textfield",
+              '#title' => t("property"),
+              // '#description' => t("The child property of the root path you want the data of."),
+              '#default_value' => @$mapper->collections[$field_machine_name][$fc_field_name]['file_target'],
+              '#attributes' => array("data" => "target"),
+            );
+
             continue;
           }
 
@@ -572,7 +590,7 @@ function stanford_capx_mapper_form_get_field_mapping_form($form, &$form_state, $
             if (!in_array($column_key, $CAP_RESTRICTED_FIELD_PROPERTIES)) {
               $form['field-mapping'][$collection_container][$field_machine_name][$fc_field_name][$column_key] = array(
                 '#type' => 'textfield',
-                '#title' => t("@var", array("@var" => $column_key)),
+                '#title' => t("@var", array("@var" => $column_key)) . t(" base"),
                 '#description' => t(@$column_info['description']),
                 '#default_value' => @$mapper->collections[$field_machine_name][$fc_field_name][$column_key],
               );
@@ -580,6 +598,15 @@ function stanford_capx_mapper_form_get_field_mapping_form($form, &$form_state, $
               if ($instance_info['required']) {
                 $form['field-mapping'][$collection_container][$field_machine_name][$fc_field_name][$column_key]["#attributes"]["class"] = "required";
               }
+
+              // Target option.
+              $form['field-mapping'][$collection_container][$field_machine_name][$fc_field_name][$column_key . "_target"] = array(
+                '#type' => "textfield",
+                '#title' => t("@var", array("@var" => $column_key)) . t(" property"),
+                // '#description' => t("The child property of the root path you want the data of."),
+                '#default_value' => @$mapper->collections[$field_machine_name][$fc_field_name][$column_key . "_target"],
+                '#attributes' => array("data" => "target"),
+              );
 
             }
           }
@@ -590,6 +617,16 @@ function stanford_capx_mapper_form_get_field_mapping_form($form, &$form_state, $
   }
 
   return $form;
+}
+
+/**
+ * Sort fields by their weight in the UI.
+ * @param  [type] $a [description]
+ * @param  [type] $b [description]
+ * @return [type]    [description]
+ */
+function uasort_by_widget_weight($a, $b) {
+  return $a["widget"]["weight"] - $b["widget"]["weight"];
 }
 
 /**

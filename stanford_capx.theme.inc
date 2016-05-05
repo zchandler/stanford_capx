@@ -12,6 +12,9 @@ function stanford_capx_theme($existing, $type, $theme, $path) {
     'stanford_capx_columns_to_the_right' => array(
       'render element' => '',
     ),
+    'stanford_capx_columns_to_the_right_field_collection' => array(
+      'render element' => '',
+    ),
   );
 }
 
@@ -61,6 +64,87 @@ function theme_stanford_capx_columns_to_the_right($elements) {
     'data' => array(
       array('data' => $info, 'class' => 'info-cell', 'style' => 'width: 60%;'),
       array('data' => $element['#children']),
+    ),
+    'class' => array($stanford_capx_theme_zebra),
+    'no_striping' => TRUE,
+  );
+
+  // Render and go!
+  $output = theme('table', array(
+    'header' => $header,
+    'rows' => $rows,
+    'class' => 'capx_mapper_table',
+  ));
+
+  return $output;
+}
+
+/**
+ * Themes a form container by putting some information to the left and
+ * all of the fields to the right in a consistent table. Uses global striping.
+ * @return [type] [description]
+ */
+function theme_stanford_capx_columns_to_the_right_field_collection($elements) {
+
+  // Take the first element.
+  $element = array_shift($elements);
+
+  global $stanford_capx_theme_zebra;
+  $stanford_capx_theme_zebra = ($stanford_capx_theme_zebra == "even") ? "odd" : "even";
+
+  // Header row cell information.
+  $header = array("<b>" . t(check_plain($element['#title'])) . "</b>", t('Root path'), t('Target property'));
+
+  // Grab the description from either the field_info or instance info.
+  $description = "";
+  if (isset($element['#field_info']['description'])) {
+    $description = $element['#field_info']['description'];
+  }
+  elseif (isset($element['#field_instance_info']['description'])) {
+    $description = $element['#field_instance_info']['description'];
+  }
+
+  // Left cell content.
+  $info = "";
+  if (isset($element['#field_info']['field_name'])) {
+    $info .= "<p><b>Machine Name</b>: <em>" . $element['#field_info']['field_name'] . "</em></p>";
+  }
+  $info .= "<p><b>Description</b>: " . check_plain($description) . "</p>";
+
+  $columns = "";
+  $targets = "<br />";
+
+  // Set the required text on the left cell.
+  $req = t("FALSE");
+  if (!empty($element["#attributes"]['class']) && in_array("required", $element['#attributes']['class'])) {
+    $req = "<b>" . t("TRUE") . "</b>";
+    $element['#children'] = preg_replace("/\<\/label>/", " <span class=\"form-required\" title=\"" . t("This field is required") . ".\">*</span>$0", $element['#children']);
+  }
+  $info .= "<p><b>Required</b>: " . $req . "</p>";
+
+  // Break out the root and target options.
+  foreach ($element as $key => $data) {
+
+    // We want only the fields.
+    if (strpos($key, "#") === 0) {
+      continue;
+    }
+    // If a field and not a _target field then it goes in the columns option.
+    if ($data["#attributes"]["data"] !== "target") {
+      $columns .= $data["#children"];
+    }
+    else {
+      $targets .= $data["#children"];
+    }
+  }
+
+  // Set up the rows even though there will only be one.
+  $rows = array();
+  $rows[] = array(
+    'data' => array(
+      array('data' => $info, 'class' => 'info-cell', 'style' => 'width: 60%;'),
+      array('data' => $columns),
+      array('data' => $targets)
     ),
     'class' => array($stanford_capx_theme_zebra),
     'no_striping' => TRUE,
